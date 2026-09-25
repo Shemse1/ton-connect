@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ton-blockchain/ton-connect/schemas/bridge-message.schema.json",
+  "title": "TON Connect bridge message",
+  "description": "Envelope the HTTP bridge writes to a recipient's SSE stream when forwarding a message from one `client_id` to another. Bridge operators MAY add deployment-specific fields beyond those listed here. See `spec/bridge.md#bridgemessage-envelope`.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["from", "message"],
+  "properties": {
+    "from": {
+      "type": "string",
+      "description": "Sender `client_id` as a 64-character lowercase hex string (32-byte X25519 public key).",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "message": {
+      "type": "string",
+      "description": "Base64-encoded ciphertext: 24-byte nonce concatenated with the `nacl.box` output. See `spec/session.md#encryption`.",
+      "contentEncoding": "base64",
+      "minLength": 1
+    },
+    "trace_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Optional UUID for analytics correlation. UUIDv7 is recommended. Set by bridges that support tracing; absent on older or tracing-unaware bridges, so readers MUST tolerate its absence. See `spec/bridge.md#trace_id--analytics-correlation`.",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    }
+  }
+}

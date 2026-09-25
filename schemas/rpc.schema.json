@@ -1,0 +1,452 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ton-blockchain/ton-connect/schemas/rpc.schema.json",
+  "title": "TON Connect RPC payloads",
+  "description": "RPC format for messages flowing inside the encrypted HTTP-bridge channel: `AppRequest` (dApp -> wallet), `WalletResponse` (wallet -> dApp), `WalletEvent` (wallet -> dApp). Per-method request payloads are validated through `contentSchema` (JSON Schema draft 2020-12); validators that ignore `contentSchema` treat the `params` entries as opaque JSON strings. `ConnectRequest` is delivered out-of-band through the deep link and is not part of this schema. See `spec/rpc.md`.",
+  "oneOf": [
+    { "$ref": "#/$defs/AppRequest" },
+    { "$ref": "#/$defs/WalletResponse" },
+    { "$ref": "#/$defs/WalletEvent" }
+  ],
+  "$defs": {
+    "NetworkId": {
+      "type": "string",
+      "pattern": "^-?[0-9]+$",
+      "examples": ["-239", "-3"],
+      "description": "TON network `global_id` as a stringified integer. `-239` is mainnet, `-3` is testnet; any other valid TON network `global_id` MAY appear here. See `spec/connect.md#network_id`."
+    },
+    "ErrorCode": {
+      "type": "integer",
+      "enum": [0, 1, 100, 300, 400],
+      "description": "Central RPC error catalogue: `0` `UNKNOWN_ERROR`, `1` `BAD_REQUEST`, `100` `UNKNOWN_APP`, `300` `USER_DECLINED`, `400` `METHOD_NOT_SUPPORTED`. See `spec/rpc.md#central-error-catalogue`."
+    },
+    "ConnectEventErrorCode": {
+      "type": "integer",
+      "enum": [0, 1, 2, 3, 100, 300, 400],
+      "description": "Connect-event error codes: `0` `UNKNOWN_ERROR`, `1` `BAD_REQUEST`, `2` `MANIFEST_NOT_FOUND`, `3` `MANIFEST_CONTENT_ERROR`, `100` `UNKNOWN_APP`, `300` `USER_DECLINED`, `400` `METHOD_NOT_SUPPORTED`. See `spec/connect.md#connect-event-error-codes`."
+    },
+    "ConnectItemErrorCode": {
+      "type": "integer",
+      "enum": [0, 400],
+      "description": "Per-`ConnectItem` error codes: `0` `UNKNOWN_ERROR`, `400` `METHOD_NOT_SUPPORTED`. See `spec/connect.md#connect-item-error-codes`."
+    },
+    "DecimalString": {
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "description": "Non-negative integer encoded as a decimal string."
+    },
+    "Base64String": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/_-]*={0,2}$",
+      "description": "Base64-encoded payload. Accepts both standard (+, /) and URL-safe (-, _) alphabets."
+    },
+    "ExtraCurrency": {
+      "type": "object",
+      "description": "Map of extra-currency ID to amount as a decimal string.",
+      "additionalProperties": { "$ref": "#/$defs/DecimalString" }
+    },
+
+    "Message": {
+      "type": "object",
+      "description": "Raw outgoing message inside a `sendTransaction` or `signMessage` payload. See `spec/rpc.md#raw-message`.",
+      "additionalProperties": false,
+      "required": ["address", "amount"],
+      "properties": {
+        "address": {
+          "type": "string",
+          "description": "Destination in friendly format per TEP-2. The bounceable flag is read from the address itself."
+        },
+        "amount": { "$ref": "#/$defs/DecimalString", "description": "Nanocoins as a decimal string." },
+        "payload": { "$ref": "#/$defs/Base64String", "description": "Raw one-cell BoC, base64-encoded." },
+        "stateInit": { "$ref": "#/$defs/Base64String", "description": "Raw one-cell BoC, base64-encoded." },
+        "extra_currency": { "$ref": "#/$defs/ExtraCurrency" }
+      }
+    },
+
+    "TonItem": {
+      "type": "object",
+      "description": "Structured TON transfer item. See `spec/rpc.md#tonitem`.",
+      "additionalProperties": false,
+      "required": ["type", "address", "amount"],
+      "properties": {
+        "type": { "const": "ton" },
+        "address": { "type": "string", "description": "Destination address in friendly format." },
+        "amount": { "$ref": "#/$defs/DecimalString", "description": "Nanocoins as a decimal string." },
+        "payload": { "$ref": "#/$defs/Base64String", "description": "Raw one-cell BoC, base64-encoded." },
+        "stateInit": { "$ref": "#/$defs/Base64String", "description": "Raw one-cell BoC, base64-encoded." },
+        "extra_currency": { "$ref": "#/$defs/ExtraCurrency" }
+      }
+    },
+    "JettonItem": {
+      "type": "object",
+      "description": "Structured jetton transfer item. See `spec/rpc.md#jettonitem`.",
+      "additionalProperties": false,
+      "required": ["type", "master", "destination", "amount"],
+      "properties": {
+        "type": { "const": "jetton" },
+        "master": { "type": "string", "description": "Jetton master contract address." },
+        "destination": { "type": "string", "description": "Recipient address." },
+        "amount": { "$ref": "#/$defs/DecimalString", "description": "Jetton amount in elementary units." },
+        "attachAmount": { "$ref": "#/$defs/DecimalString", "description": "TON value (nanocoins) to attach for transfer execution." },
+        "queryId": { "type": "string", "description": "Query ID for the transfer body." },
+        "responseDestination": { "type": "string", "description": "Address for the excess-TON refund." },
+        "customPayload": { "$ref": "#/$defs/Base64String", "description": "Raw one-cell BoC, base64-encoded." },
+        "forwardAmount": { "$ref": "#/$defs/DecimalString", "description": "Nanocoins forwarded to the destination." },
+        "forwardPayload": { "$ref": "#/$defs/Base64String", "description": "Raw one-cell BoC, base64-encoded." }
+      }
+    },
+    "NftItem": {
+      "type": "object",
+      "description": "Structured NFT transfer item. See `spec/rpc.md#nftitem`.",
+      "additionalProperties": false,
+      "required": ["type", "nftAddress", "newOwner"],
+      "properties": {
+        "type": { "const": "nft" },
+        "nftAddress": { "type": "string", "description": "NFT item contract address." },
+        "newOwner": { "type": "string", "description": "New owner address." },
+        "attachAmount": { "$ref": "#/$defs/DecimalString", "description": "TON value (nanocoins) to attach for transfer execution." },
+        "queryId": { "type": "string", "description": "Query ID for the transfer body." },
+        "responseDestination": { "type": "string", "description": "Address for the excess-TON refund." },
+        "customPayload": { "$ref": "#/$defs/Base64String", "description": "Raw one-cell BoC, base64-encoded." },
+        "forwardAmount": { "$ref": "#/$defs/DecimalString", "description": "Nanocoins forwarded to the destination." },
+        "forwardPayload": { "$ref": "#/$defs/Base64String", "description": "Raw one-cell BoC, base64-encoded." }
+      }
+    },
+    "TransactionItem": {
+      "description": "Structured item for `sendTransaction` or `signMessage`, discriminated by `type`. See `spec/rpc.md#structured-items`.",
+      "oneOf": [
+        { "$ref": "#/$defs/TonItem" },
+        { "$ref": "#/$defs/JettonItem" },
+        { "$ref": "#/$defs/NftItem" }
+      ]
+    },
+
+    "TransactionPayload": {
+      "type": "object",
+      "description": "`sendTransaction` or `signMessage` payload. A payload MUST contain `messages` or `items` and MUST NOT contain both. See `spec/rpc.md#sendtransaction`.",
+      "additionalProperties": false,
+      "properties": {
+        "valid_until": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Unix seconds. The wallet MUST reject the request after this moment."
+        },
+        "network": {
+          "$ref": "#/$defs/NetworkId",
+          "description": "Target network where the dApp intends the transaction to land. dApps SHOULD always set this explicitly."
+        },
+        "from": {
+          "type": "string",
+          "description": "Sender address intended by the dApp (raw or friendly format)."
+        },
+        "messages": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Message" },
+          "description": "Raw outgoing messages. Mutually exclusive with `items`."
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/TransactionItem" },
+          "description": "Structured items. Mutually exclusive with `messages`."
+        }
+      },
+      "oneOf": [
+        { "required": ["messages"], "not": { "required": ["items"] } },
+        { "required": ["items"], "not": { "required": ["messages"] } }
+      ]
+    },
+
+    "SignDataText": {
+      "type": "object",
+      "description": "`signData` payload for arbitrary UTF-8 text. See `spec/rpc.md#signdata`.",
+      "additionalProperties": false,
+      "required": ["type", "text"],
+      "properties": {
+        "type": { "const": "text" },
+        "text": { "type": "string", "description": "UTF-8 text to display verbatim and sign." },
+        "network": { "$ref": "#/$defs/NetworkId" },
+        "from": { "type": "string", "description": "Signer address intended by the dApp (raw or friendly format)." }
+      }
+    },
+    "SignDataBinary": {
+      "type": "object",
+      "description": "`signData` payload for opaque binary bytes. See `spec/rpc.md#signdata`.",
+      "additionalProperties": false,
+      "required": ["type", "bytes"],
+      "properties": {
+        "type": { "const": "binary" },
+        "bytes": { "$ref": "#/$defs/Base64String", "description": "Base64-encoded bytes to sign." },
+        "network": { "$ref": "#/$defs/NetworkId" },
+        "from": { "type": "string", "description": "Signer address intended by the dApp (raw or friendly format)." }
+      }
+    },
+    "SignDataCell": {
+      "type": "object",
+      "description": "`signData` payload for a TVM cell. See `spec/rpc.md#signdata`.",
+      "additionalProperties": false,
+      "required": ["type", "schema", "cell"],
+      "properties": {
+        "type": { "const": "cell" },
+        "schema": { "type": "string", "description": "TL-B schema as a UTF-8 string. If several types are defined, the last declared type is the root." },
+        "cell": { "$ref": "#/$defs/Base64String", "description": "Base64 BoC of the cell to sign." },
+        "network": { "$ref": "#/$defs/NetworkId" },
+        "from": { "type": "string", "description": "Signer address intended by the dApp (raw or friendly format)." }
+      }
+    },
+    "SignDataPayload": {
+      "description": "`signData` payload, discriminated by `type`. See `spec/rpc.md#signdata`.",
+      "oneOf": [
+        { "$ref": "#/$defs/SignDataText" },
+        { "$ref": "#/$defs/SignDataBinary" },
+        { "$ref": "#/$defs/SignDataCell" }
+      ]
+    },
+
+    "SendTransactionRequest": {
+      "type": "object",
+      "description": "`AppRequest` envelope carrying a `sendTransaction` call. See `spec/rpc.md#sendtransaction`.",
+      "additionalProperties": false,
+      "required": ["method", "params", "id"],
+      "properties": {
+        "method": { "const": "sendTransaction" },
+        "params": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "type": "string",
+            "contentMediaType": "application/json",
+            "contentSchema": { "$ref": "#/$defs/TransactionPayload" },
+            "description": "JSON-stringified `TransactionPayload`."
+          }
+        },
+        "id": { "type": "string", "description": "Monotonically increasing per session." }
+      }
+    },
+    "SignMessageRequest": {
+      "type": "object",
+      "description": "`AppRequest` envelope carrying a `signMessage` call. See `spec/rpc.md#signmessage`.",
+      "additionalProperties": false,
+      "required": ["method", "params", "id"],
+      "properties": {
+        "method": { "const": "signMessage" },
+        "params": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "type": "string",
+            "contentMediaType": "application/json",
+            "contentSchema": { "$ref": "#/$defs/TransactionPayload" },
+            "description": "JSON-stringified `TransactionPayload`. Same shape as `sendTransaction`."
+          }
+        },
+        "id": { "type": "string", "description": "Monotonically increasing per session." }
+      }
+    },
+    "SignDataRequest": {
+      "type": "object",
+      "description": "`AppRequest` envelope carrying a `signData` call. See `spec/rpc.md#signdata`.",
+      "additionalProperties": false,
+      "required": ["method", "params", "id"],
+      "properties": {
+        "method": { "const": "signData" },
+        "params": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "type": "string",
+            "contentMediaType": "application/json",
+            "contentSchema": { "$ref": "#/$defs/SignDataPayload" },
+            "description": "JSON-stringified `SignDataPayload`."
+          }
+        },
+        "id": { "type": "string", "description": "Monotonically increasing per session." }
+      }
+    },
+    "DisconnectRequest": {
+      "type": "object",
+      "description": "`AppRequest` envelope carrying a `disconnect` call. See `spec/rpc.md#disconnect`.",
+      "additionalProperties": false,
+      "required": ["method", "params", "id"],
+      "properties": {
+        "method": { "const": "disconnect" },
+        "params": {
+          "type": "array",
+          "maxItems": 0,
+          "description": "Empty array."
+        },
+        "id": { "type": "string", "description": "Monotonically increasing per session." }
+      }
+    },
+    "AppRequest": {
+      "description": "Request from the dApp to the wallet, discriminated by `method`. See `spec/rpc.md#apprequest`.",
+      "oneOf": [
+        { "$ref": "#/$defs/SendTransactionRequest" },
+        { "$ref": "#/$defs/SignMessageRequest" },
+        { "$ref": "#/$defs/SignDataRequest" },
+        { "$ref": "#/$defs/DisconnectRequest" }
+      ]
+    },
+
+    "SendTransactionResult": {
+      "type": "string",
+      "description": "`sendTransaction` success result: base64 BoC of the broadcast external message. See `spec/rpc.md#response`.",
+      "pattern": "^[A-Za-z0-9+/_-]*={0,2}$",
+      "minLength": 1
+    },
+    "SignMessageResult": {
+      "type": "object",
+      "description": "`signMessage` success result: the signed internal message BoC. See `spec/rpc.md#signmessage`.",
+      "additionalProperties": false,
+      "required": ["internalBoc"],
+      "properties": {
+        "internalBoc": {
+          "$ref": "#/$defs/Base64String",
+          "description": "Base64 BoC of the signed internal message.",
+          "minLength": 1
+        }
+      }
+    },
+    "SignDataResult": {
+      "type": "object",
+      "description": "`signData` success result. See `spec/rpc.md#signdata`.",
+      "additionalProperties": false,
+      "required": ["signature", "address", "timestamp", "domain", "payload"],
+      "properties": {
+        "signature": { "$ref": "#/$defs/Base64String", "description": "Base64-encoded Ed25519 signature." },
+        "address": { "type": "string", "description": "Raw wallet address." },
+        "timestamp": { "type": "integer", "minimum": 0, "description": "Unix seconds at signing time (UTC)." },
+        "domain": { "type": "string", "description": "App domain (URL part, not encoded)." },
+        "payload": { "type": "object", "description": "Echo of the request payload." }
+      }
+    },
+    "DisconnectResult": {
+      "type": "object",
+      "description": "`disconnect` success result: empty object. See `spec/rpc.md#disconnect`.",
+      "maxProperties": 0
+    },
+
+    "WalletResponseSuccess": {
+      "type": "object",
+      "description": "Success reply matched by `id`. The `result` shape depends on the method called: `SendTransactionResult`, `SignMessageResult`, `SignDataResult` or `DisconnectResult`.",
+      "required": ["result", "id"],
+      "additionalProperties": false,
+      "properties": {
+        "result": {
+          "type": ["string", "object"],
+          "description": "Method-specific success payload."
+        },
+        "id": { "type": "string", "description": "Matches the originating `AppRequest.id`." }
+      }
+    },
+    "WalletResponseError": {
+      "type": "object",
+      "description": "Error reply matched by `id`.",
+      "required": ["error", "id"],
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "additionalProperties": false,
+          "properties": {
+            "code": { "$ref": "#/$defs/ErrorCode" },
+            "message": { "type": "string" },
+            "data": { "description": "Method-specific extra error data; optional." }
+          }
+        },
+        "id": { "type": "string", "description": "Matches the originating `AppRequest.id`." }
+      }
+    },
+    "WalletResponse": {
+      "description": "Reply to a specific `AppRequest`, identified by matching `id`. See `spec/rpc.md#walletresponse`.",
+      "oneOf": [
+        { "$ref": "#/$defs/WalletResponseSuccess" },
+        { "$ref": "#/$defs/WalletResponseError" }
+      ]
+    },
+
+    "DisconnectEventPayload": {
+      "type": "object",
+      "description": "Payload of a wallet-initiated `disconnect` event: empty object. See `spec/rpc.md#disconnect-event`.",
+      "maxProperties": 0
+    },
+    "ConnectEventErrorPayload": {
+      "type": "object",
+      "description": "Payload of a `connect_error` event. See `spec/connect.md#connectevent`.",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "$ref": "#/$defs/ConnectEventErrorCode" },
+        "message": { "type": "string" }
+      }
+    },
+    "WalletEvent": {
+      "description": "Wallet-initiated message to the dApp, discriminated by `event`. See `spec/rpc.md#walletevent`.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["event", "id", "payload"],
+          "properties": {
+            "event": { "const": "connect" },
+            "id": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Monotonically increasing per session. The dApp MUST reject any id that is not strictly greater than the last processed event id."
+            },
+            "payload": {
+              "type": "object",
+              "description": "`ConnectEventSuccess` payload. See `spec/connect.md#connectevent`.",
+              "required": ["items", "device"],
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "description": "Replies to the requested `ConnectItem`s (`TonAddressItemReply`, `TonProofItemReply`)."
+                },
+                "device": {
+                  "type": "object",
+                  "description": "Wallet `DeviceInfo`. See `spec/connect.md#deviceinfo`."
+                }
+              }
+            },
+            "response": {
+              "type": "object",
+              "description": "Present only when the connect URL carried an embedded request (the `e` parameter). Follows the `WalletResponse` shape but has no `id`. See `spec/deeplinks.md#embedded-requests-e`."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["event", "id", "payload"],
+          "properties": {
+            "event": { "const": "connect_error" },
+            "id": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "payload": { "$ref": "#/$defs/ConnectEventErrorPayload" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["event", "id", "payload"],
+          "properties": {
+            "event": { "const": "disconnect" },
+            "id": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "payload": { "$ref": "#/$defs/DisconnectEventPayload" }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ton-blockchain/ton-connect/schemas/wallets-v2.schema.json",
+  "title": "TON Connect wallets list",
+  "description": "Schema for the TON Connect wallets registry: an array of wallet entries describing display metadata, supported bridges, platforms and TON Connect features.",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "app_name",
+      "name",
+      "image",
+      "about_url",
+      "bridge",
+      "platforms",
+      "features"
+    ],
+    "properties": {
+      "app_name": {
+        "type": "string",
+        "description": "ID of the wallet.",
+        "minLength": 1
+      },
+      "name": {
+        "type": "string",
+        "description": "Display name of the wallet.",
+        "minLength": 1
+      },
+      "image": {
+        "type": "string",
+        "description": "HTTPS URL of the wallet's icon. MUST end in `.png`.",
+        "pattern": "^https://.+\\.png$"
+      },
+      "tondns": {
+        "type": "string",
+        "description": "TON DNS name ending in `.ton`. Reserved for future use by the protocol.",
+        "pattern": ".+\\.ton$"
+      },
+      "about_url": {
+        "type": "string",
+        "description": "Info or landing page of the wallet.",
+        "pattern": "^https://.+"
+      },
+      "universal_url": {
+        "type": "string",
+        "description": "Base part of the wallet's universal URL. REQUIRED when the entry lists an `sse` bridge.",
+        "pattern": "^https://.+"
+      },
+      "deepLink": {
+        "type": "string",
+        "description": "Custom-scheme deep link, for example `tonkeeper-tc://`. SHOULD be provided when the entry lists an `sse` bridge.",
+        "minLength": 1
+      },
+      "bridge": {
+        "type": "array",
+        "description": "Bridge transports the wallet supports. One or two entries: an HTTP (SSE) bridge, an in-page JS bridge or both. At most one entry per bridge type.",
+        "minItems": 1,
+        "maxItems": 2,
+        "items": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "key"],
+              "properties": {
+                "type": { "type": "string", "enum": ["js"], "description": "Bridge transport type." },
+                "key": {
+                  "type": "string",
+                  "description": "The `window` property name under which the wallet exposes its injected JS bridge. With `key: \"tonkeeper\"`, the `TonConnectBridge` object is reachable as `window.tonkeeper.tonconnect`. SHOULD equal the entry's `app_name`; a few legacy registry entries diverge and are tolerated for backward compatibility.",
+                  "minLength": 1
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "url"],
+              "properties": {
+                "type": { "type": "string", "enum": ["sse"], "description": "Bridge transport type." },
+                "url": { "type": "string", "pattern": "^https://.+", "description": "HTTPS URL of the wallet's HTTP bridge endpoint." }
+              }
+            }
+          ]
+        },
+        "if": { "minItems": 2 },
+        "then": {
+          "allOf": [
+            {
+              "contains": {
+                "type": "object",
+                "properties": { "type": { "const": "sse" } },
+                "required": ["type"]
+              }
+            },
+            {
+              "contains": {
+                "type": "object",
+                "properties": { "type": { "const": "js" } },
+                "required": ["type"]
+              }
+            }
+          ]
+        }
+      },
+      "platforms": {
+        "type": "array",
+        "description": "Platforms the wallet supports.",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "enum": [
+            "ios",
+            "android",
+            "chrome",
+            "firefox",
+            "safari",
+            "macos",
+            "windows",
+            "linux"
+          ]
+        }
+      },
+      "features": {
+        "type": "array",
+        "description": "TON Connect features and capabilities the wallet supports.",
+        "minItems": 1,
+        "items": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "maxMessages"],
+              "description": "The wallet supports `sendTransaction`.",
+              "properties": {
+                "name": { "type": "string", "enum": ["SendTransaction"], "description": "Feature identifier." },
+                "maxMessages": { "type": "integer", "minimum": 1, "description": "Maximum number of messages in one `sendTransaction` call the wallet accepts." },
+                "extraCurrencySupported": {
+                  "type": "boolean",
+                  "description": "Whether the wallet supports extra-currency transfers."
+                },
+                "itemTypes": {
+                  "type": "array",
+                  "description": "Structured item types the wallet supports in `sendTransaction`. Absent means the wallet only accepts raw `messages`.",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "enum": ["ton", "jetton", "nft"]
+                  }
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "types"],
+              "description": "The wallet supports `signData`.",
+              "properties": {
+                "name": { "type": "string", "enum": ["SignData"], "description": "Feature identifier." },
+                "types": {
+                  "type": "array",
+                  "description": "`signData` payload variants the wallet supports.",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "enum": ["text", "binary", "cell"]
+                  }
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "maxMessages"],
+              "description": "The wallet supports `signMessage`.",
+              "properties": {
+                "name": { "type": "string", "enum": ["SignMessage"], "description": "Feature identifier." },
+                "maxMessages": { "type": "integer", "minimum": 1, "description": "Maximum number of messages in one `signMessage` call the wallet accepts." },
+                "extraCurrencySupported": {
+                  "type": "boolean",
+                  "description": "Whether the wallet supports extra-currency transfers."
+                },
+                "itemTypes": {
+                  "type": "array",
+                  "description": "Structured item types the wallet supports in `signMessage`. Absent means the wallet only accepts raw `messages`.",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "enum": ["ton", "jetton", "nft"]
+                  }
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name"],
+              "description": "The wallet can process the `e` embedded-request parameter on connect URLs.",
+              "properties": {
+                "name": { "type": "string", "enum": ["EmbeddedRequest"], "description": "Feature identifier." }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "if": {
+      "properties": {
+        "bridge": {
+          "contains": {
+            "type": "object",
+            "properties": { "type": { "const": "sse" } },
+            "required": ["type"]
+          }
+        }
+      },
+      "required": ["bridge"]
+    },
+    "then": {
+      "required": ["universal_url"]
+    }
+  }
+}

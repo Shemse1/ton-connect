@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ton-blockchain/ton-connect/schemas/manifest.schema.json",
+  "title": "TON Connect app manifest",
+  "description": "Schema for `tonconnect-manifest.json`. The wallet fetches this file before showing the connect prompt and displays the metadata to the user. See `spec/manifest.md`.",
+  "type": "object",
+  "required": ["url", "name", "iconUrl"],
+  "additionalProperties": true,
+  "not": { "required": ["version"] },
+  "properties": {
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://.+",
+      "description": "App URL. Identifies the dApp and is opened by the wallet when the user taps the app icon. SHOULD NOT include a trailing slash. The host portion is extracted as `AppDomain` for `ton_proof` and `signData` signatures."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Display name of the dApp, shown to the user during the connect prompt."
+    },
+    "iconUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://.+",
+      "description": "HTTPS URL of the app icon. Raster image; PNG (recommended) or ICO. SVG MUST NOT be used. 180×180 px square is recommended."
+    },
+    "termsOfUseUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://.+",
+      "description": "Optional. HTTPS URL of the dApp's terms of use."
+    },
+    "privacyPolicyUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://.+",
+      "description": "Optional. HTTPS URL of the dApp's privacy policy."
+    }
+  }
+}

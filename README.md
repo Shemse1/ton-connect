@@ -1,62 +1,73 @@
 # TON Connect Specification
 
-This repository provides details on the TON Connect protocol.
+TON Connect is the protocol that connects a [TON](https://ton.org) wallet to a decentralised application. It defines how a dApp discovers the wallet, how the wallet authenticates the user's account and how subsequent requests travel end-to-end encrypted over an untrusted relay.
 
-## Developing a DApp? Use the SDK
+## Building a dApp
 
-If you just want to integrate TON Connect into your app, just follow the [TON Documentation](https://docs.ton.org/develop/dapps/ton-connect/overview) guides. No need to dive deep into the protocols.
+If you only want to integrate TON Connect into a dApp, follow the dApp-developer documentation instead of reading the protocol spec directly.
 
-* [TON Connect Overview](https://docs.ton.org/develop/dapps/ton-connect/overview)
-* [TON Connect for React Apps](https://docs.ton.org/develop/dapps/ton-connect/react)
-* [TON Connect for HTML/JS Apps](https://docs.ton.org/develop/dapps/ton-connect/web)
-* [List of supported SDKs](https://docs.ton.org/develop/dapps/ton-connect/developers)
+- [TON Connect overview](https://docs.ton.org/ecosystem/ton-connect/overview)
+- [TON Connect for dApps](https://docs.ton.org/ecosystem/ton-connect/react)
 
-If no SDK for your language, take the [JS SDK](https://github.com/ton-connect/sdk/tree/main/packages/sdk) as a reference and implement your own wrapper. Let us know about your work — we'd be happy to list it here.
+If no SDK exists for your language, take the [JS SDK](https://github.com/ton-connect/sdk/) as a reference and implement your own wrapper.
 
-## Protocol specifications
+## Layout
 
-If you implement an SDK, a wallet or want to learn more how Ton Connect works, please read below.
+- [`spec/`](./spec) — normative protocol specification. Start with [`spec/overview.md`](./spec/overview.md) for the architecture, message flow and conformance levels.
+- [`guides/`](./guides) — wallet implementation guides.
+- [`schemas/`](./schemas) — machine-readable JSON Schema artifacts for the app manifest, wallets list, bridge envelope and RPC envelopes.
+- [`GLOSSARY.md`](./GLOSSARY.md) — every defined term in one place.
+- [`CHANGELOG.md`](./CHANGELOG.md) — protocol-affecting changes, calendar-versioned.
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — how to propose a change.
 
-* [Protocol workflow](workflows.md): an overview of all the protocols.
-* [Bridge API](bridge.md) specifies how the data is transmitted between the app and the wallet.
-* [Session protocol](session.md) ensures end-to-end encrypted communication over the bridge.
-* [Requests protocol](requests-responses.md) defines requests and responses for the app and the wallet.
-* [Wallet guidelines](wallet-guidelines.md) defines guidelines for wallet developers.
+## Companion repositories
+
+- [`ton-connect/sdk`](https://github.com/ton-connect/sdk) — TypeScript SDK packages: `@tonconnect/sdk`, `@tonconnect/ui`, `@tonconnect/ui-react`.
+- [`ton-connect/bridge`](https://github.com/ton-connect/bridge) — Go reference implementation of the HTTP bridge.
+- [`ton-connect/wallets-list`](https://github.com/ton-connect/wallets-list) — public registry of TON Connect-compatible wallets (`wallets-v2.json`).
+
+## Where to start
+
+| You are                                  | Start with                                                                                                       |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Integrating TON Connect into a dApp      | the SDK at [`ton-connect/sdk`](https://github.com/ton-connect/sdk)                                               |
+| Implementing a wallet                    | [`spec/overview.md`](./spec/overview.md), then [`guides/wallet-guidelines.md`](./guides/wallet-guidelines.md)    |
+| Operating a bridge                       | [`spec/bridge.md`](./spec/bridge.md)                                                                             |
+| Looking up a message format              | [`schemas/`](./schemas) and the matching [`spec/`](./spec) page                                                  |
+| Proposing a protocol change              | [`CONTRIBUTING.md`](./CONTRIBUTING.md)                                                                           |
 
 ## Q&A
 
-#### I am building an HTML/JS app, what should I read?
+### What should I read if I am building an HTML/JS app?
 
-Simply use the [TON Documentation](https://docs.ton.org/develop/dapps/ton-connect/overview) manuals and do not worry about the underlying protocols.
+Use the [TON Connect documentation](https://docs.ton.org/ecosystem/ton-connect/overview) and do not worry about the underlying protocol.
 
-#### I need an SDK in my favorite language
+### How do I add TON Connect support to a language without an SDK?
 
-Please take the JS SDK as a reference and check out the protocol docs above.
+Take the JS SDK as a reference and check out the protocol pages under [`spec/`](./spec).
 
-#### How do you detect whether the app is embedded in the wallet? 
+### How do I detect whether the dApp is embedded in the wallet?
 
-JS SDK does that for you; just get wallets list `connector.getWallets()` and check `embedded` property of the corresponding list item. If you build your own SDK you should check `window.[targetWalletJsBridgeKey].tonconnect.isWalletBrowser`.
+The JS SDK does that for you — get the wallets list with `connector.getWallets()` and check the `embedded` property of the matching entry. If you build your own SDK, check `window.<walletJsBridgeKey>.tonconnect.isWalletBrowser`. See [`spec/bridge.md` § JS bridge](./spec/bridge.md#js-bridge).
 
-#### How do you detect if the wallet is a browser extension? 
+### How do I detect whether the wallet is a browser extension?
 
-Like with embedded apps (see above), JS SDK detects it for you via `injected` property of the corresponding `connector.getWallets()` list item. If you build your own SDK you should check that `window.[targetWalletJsBridgeKey].tonconnect` exists.
+Same as the embedded-dApp case. The JS SDK reports it via the `injected` property of the `connector.getWallets()` entry. If you build your own SDK, check that `window.<walletJsBridgeKey>.tonconnect` exists.
 
-#### How to implement backend authorization with tonconnect?
+### How do I implement backend authorisation with TON Connect?
 
-[See an example of dapp-backend](https://github.com/ton-connect/demo-dapp-backend)
+See the [`ton-connect/demo-dapp-backend`](https://github.com/ton-connect/demo-dapp-backend) reference and [`spec/connect.md` § Address proof signature](./spec/connect.md#address-proof-signature-ton_proof) for the signature format and verification flow.
 
-#### How do I make my own bridge? 
+### How do I run my own bridge?
 
-You don’t need to, unless you are building a wallet.
+You do not need to unless you are building a wallet.
 
-If you build a wallet, you will need to provide a bridge. See our [reference implementation in Go](https://github.com/ton-connect/bridge).
+If you build a wallet, you will need to provide a bridge. See the [reference Go implementation](https://github.com/ton-connect/bridge) and [`spec/bridge.md`](./spec/bridge.md). For a quick start, the common bridge at `https://connect.ton.org/bridge` is available. The wallet's side of the bridge API is not mandated by this spec.
 
-Keep in mind that the wallet’s side of the bridge API is not mandated.
+### I make a wallet — how do I add it to the wallets list?
 
-For a quick start you can use the common TON Connect bridge https://bridge.tonapi.io/bridge.
+Submit a pull request to [`ton-connect/wallets-list`](https://github.com/ton-connect/wallets-list) and fill out your wallet's entry. See [`spec/wallets-list.md`](./spec/wallets-list.md) for the entry-field reference.
 
-#### I make a wallet, how do I add it to the list of wallets? 
+## Licence
 
-Submit a pull request for the [wallets-list](https://github.com/ton-blockchain/wallets-list) repository and fill our all the necessary metadata.
-
-Apps may also add wallets directly through the SDK.
+See [`LICENCE`](./LICENCE).
